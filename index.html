@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Base64 Tool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #0f172a;
+    color: white;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* SWITCHER */
+.switcher {
+    display: flex;
+    background: #1e293b;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.switcher button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    color: white;
+    cursor: pointer;
+}
+
+.switcher button.active {
+    background: #22c55e;
+}
+
+/* CARD */
+.card {
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+/* INPUT */
+textarea {
+    width: 100%;
+    height: 140px;
+    border-radius: 10px;
+    border: none;
+    padding: 10px;
+    margin-top: 10px;
+    resize: vertical;
+}
+
+/* CONTROLS */
+.controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+button, select, input[type="file"] {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.primary {
+    background: #22c55e;
+    color: white;
+}
+
+.secondary {
+    background: #334155;
+    color: white;
+}
+
+/* OUTPUT */
+.output {
+    margin-top: 15px;
+    background: #0f172a;
+    padding: 10px;
+    border-radius: 10px;
+    min-height: 120px;
+    text-align: center;
+}
+
+img, iframe, video, audio {
+    max-width: 100%;
+}
+
+.hidden {
+    display: none;
+}
+
+.copy {
+    margin-left: auto;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Base64 Tool</h1>
+
+    <!-- SWITCH -->
+    <div class="switcher">
+        <button id="encodeBtn" class="active" onclick="setMode('encode')">Encode</button>
+        <button id="decodeBtn" onclick="setMode('decode')">Decode</button>
+    </div>
+
+    <div class="card">
+
+        <!-- INPUT -->
+        <label id="inputLabel">Enter text or upload file:</label>
+        <textarea id="input"></textarea>
+
+        <div class="controls" id="fileSection">
+            <input type="file" id="fileInput">
+        </div>
+
+        <!-- TYPE (ONLY FOR DECODE) -->
+        <div class="controls hidden" id="typeSection">
+            <select id="type">
+                <option value="image/png">Image</option>
+                <option value="application/pdf">PDF</option>
+                <option value="text/plain">Text</option>
+                <option value="video/mp4">Video</option>
+                <option value="audio/mpeg">Audio</option>
+            </select>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="controls">
+            <button class="primary" onclick="handleAction()">Convert</button>
+            <button class="secondary" onclick="clearAll()">Clear</button>
+            <button class="secondary copy" onclick="copyText()">Copy</button>
+        </div>
+
+        <!-- OUTPUT -->
+        <div class="output" id="output">Result will appear here</div>
+
+    </div>
+</div>
+
+<script>
+let mode = "encode";
+
+function setMode(newMode) {
+    mode = newMode;
+
+    document.getElementById("encodeBtn").classList.toggle("active", mode === "encode");
+    document.getElementById("decodeBtn").classList.toggle("active", mode === "decode");
+
+    document.getElementById("fileSection").classList.toggle("hidden", mode !== "encode");
+    document.getElementById("typeSection").classList.toggle("hidden", mode !== "decode");
+
+    document.getElementById("inputLabel").innerText =
+        mode === "encode"
+        ? "Enter text or upload file:"
+        : "Paste Base64 here:";
+}
+
+function handleAction() {
+    if (mode === "encode") encode();
+    else decode();
+}
+
+// ENCODE TEXT
+function encode() {
+    const input = document.getElementById("input").value;
+    if (!input) return alert("Enter something");
+
+    const encoded = btoa(unescape(encodeURIComponent(input)));
+    document.getElementById("output").textContent = encoded;
+}
+
+// FILE → BASE64
+document.getElementById("fileInput").addEventListener("change", function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const base64 = reader.result.split(",")[1];
+        document.getElementById("output").textContent = base64;
+    };
+    reader.readAsDataURL(file);
+});
+
+// DECODE
+function decode() {
+    const base64 = document.getElementById("input").value.trim();
+    const type = document.getElementById("type").value;
+    const output = document.getElementById("output");
+
+    output.innerHTML = "";
+
+    if (!base64) return;
+
+    const dataUrl = `data:${type};base64,${base64}`;
+    let el;
+
+    if (type.startsWith("image")) {
+        el = document.createElement("img");
+        el.src = dataUrl;
+    } else if (type === "application/pdf") {
+        el = document.createElement("iframe");
+        el.src = dataUrl;
+        el.style.height = "400px";
+        el.style.width = "100%";
+    } else if (type.startsWith("video")) {
+        el = document.createElement("video");
+        el.src = dataUrl;
+        el.controls = true;
+    } else if (type.startsWith("audio")) {
+        el = document.createElement("audio");
+        el.src = dataUrl;
+        el.controls = true;
+    } else {
+        el = document.createElement("pre");
+        el.textContent = atob(base64);
+    }
+
+    output.appendChild(el);
+}
+
+// COPY
+function copyText() {
+    const text = document.getElementById("output").textContent;
+    navigator.clipboard.writeText(text);
+    alert("Copied!");
+}
+
+// CLEAR
+function clearAll() {
+    document.getElementById("input").value = "";
+    document.getElementById("output").innerHTML = "Cleared";
+}
+</script>
+
+</body>
+  </html>
